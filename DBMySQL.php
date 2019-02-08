@@ -70,7 +70,7 @@ class MySQLPS{
    public function consulta($consulta)
    {
       $this->total_consultasPS++;
-      $resultado = mysqli_query($consulta,$this->conexionPS);
+      $resultado = mysqli_query($this->conexionPS,$consulta);
       if(!$resultado)
       {
          echo 'MySQL Error: ' . mysqli_error($this->conexionPS)."Consulta: ".$consulta."<br>";

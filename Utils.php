@@ -25,9 +25,6 @@ class Utils
     protected $idProducte;
     protected $idFabricant;
 
-    /* Constants Prestashop */
-    public $idLangICG;
-
     /**
     * MÈTODES
     */
@@ -43,7 +40,6 @@ class Utils
       {
          $this->myDBPS = new MySQLPS();
       }
-      $idLangICG = ICG_LANG;
     }
 
     /* Obtenir productes a tractar */
@@ -233,7 +229,7 @@ class Utils
       $xml = $this->webService->get($opt);
       $resources = $xml->product_option_value->name;
       foreach($resources->language as $language){
-        if($language['id'] == ICG_LANG){
+        if($language['id'] == PS_LANG_ICG){
           //echo "Obtenim el valor: ".$language." <br>\n";
           return $language;
         }
@@ -269,10 +265,10 @@ class Utils
         $xmlCreate = $this->webService->get(array('url' => PS_SHOP_PATH.'/api/product_option_values?schema=blank'));
         $resourceCreate = $xmlCreate->children()->children();
         $resourceCreate->id_attribute_group = $idGrupAtribut;
+        
         $resourceCreate->name->language[0] = $nomAtribut;
         $resourceCreate->name->language[1] = $nomAtribut;
-        $resourceCreate->name->language[3] = $nomAtribut;
-
+        $resourceCreate->name->language[2] = $nomAtribut;
 
         $optCreate['postXml'] = $xmlCreate->asXML();
         $xmlResponse = $this->webService->add($optCreate);
@@ -339,10 +335,10 @@ class Utils
         /**
         BLOC STOCK
         */
-        /* Crear fabricant */
+        /* Canviar stock */
         public function actualitzarStock($idProductePS, $idAtributPS, $stock){
 
-          $result = $this->myDBPS->consulta("UPDATE ".PS_NAME_PS.".ps_stock_available SET quantity = ".$stock." WHERE id_product = ".$idProductePS." AND id_product_attribute =".$idAtributPS);
+          $result = $this->myDBPS->consulta("UPDATE ".DB_NAME_PS.".ps_stock_available SET quantity = ".$stock." WHERE id_product = ".$idProductePS." AND id_product_attribute =".$idAtributPS);
           //Per a cada nou stock
         	if($result)
         	{

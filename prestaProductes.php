@@ -18,6 +18,7 @@ Script  per a consultar els productes creats a la taula integracio ICG i actuali
 		while($row_producte = $utils->myDB->fetch_array($result_producte))
 		{
 			$idProductePS = $utils->existeixProducte($row_producte['icg_producte']);
+			//echo "Producte PS: ".$idProductePS."<br>";
 			if (!$idProductePS){
 					$idFabricantICG = $row_producte['fabricant'];
 					$nomFabricantICG = $row_producte['nom_fabricant'];
@@ -40,9 +41,9 @@ Script  per a consultar els productes creats a la taula integracio ICG i actuali
 				//Consulta $idGrupTalla i $idGrupColor a la taula ps_producte_t_c
 				$idGrupTalla = $utils->getGrup($idProductePS, "ps_grup_talla");
 				$idGrupColor = $utils->getGrup($idProductePS, "ps_grup_color");
-				echo "El producte $idProductePS ja existeix, i te un grup talla $idGrupTalla i color $idGrupColor<br>\n";
+				//echo "El producte $idProductePS ja existeix, i te un grup talla $idGrupTalla i color $idGrupColor<br>\n";
 			}
-
+			echo "Producte Atribut PS: ".$row_producte['ps_producte_atribut']."<br>";
 			if($row_producte['ps_producte_atribut'] == 0){
 				$nomTalla = $row_producte['icg_talla'];
 				$idTalla = $utils->inserirAtribut($row_producte, $idGrupTalla, $nomTalla);
@@ -55,7 +56,7 @@ Script  per a consultar els productes creats a la taula integracio ICG i actuali
 				echo "La combinacio ".$row_producte['ps_producte_atribut']." ja existeix. No cal fer res.<br>\n";
 			}
 
-			echo "Si hem arribat aqui, vol dir que s'ha creat o ja existia el producte $idProductePS a Prestashop<br>\n";
+			echo "Si hem arribat aqui, vol dir que s'ha creat o ja existia el producte $idProductePS a Prestashop amb la combinacio $idCombination<br>\n";
 
 			$utils->flagActualitzatProducte($row_producte);
 		}
