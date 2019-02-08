@@ -24,16 +24,19 @@ class MSSQL{
          }
       }
    }
-
+   public function getConexion(){
+      return $this->conexion;
+   }
    public function consulta($consulta){
       $this->total_consultas++;
-      $resultat = $this->conexion->query($consulta);
-      if(!$resultat)
+      $resultat = $this->conexion->prepare($consulta);
+      if($resultat->execute())
       {
+         return $resultat;
+      } else {
 		   echo 'MSSQL Error: Consulta: '.$consulta."<br>";
-		   //exit;
+         return 0;
       }
-      return $resultat;
    }
 
    public function fetch_array($consulta){
