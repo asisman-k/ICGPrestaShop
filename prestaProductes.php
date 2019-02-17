@@ -7,14 +7,18 @@ Script  per a consultar els productes creats a la taula integracio ICG i actuali
 	require_once("Utils.php");
 
 	$utils = new Utils();
-
+    $productes_creats = 0;
+    $combinacions_creades = 0;
+    $total_per_actualitzar=0;
+    $productes_jaexistents = 0;
+try {
 	//Consulta productes creats nous
 	$margeActualitzacio = strtotime("-60 minutes");
 	$timestampACercar = date("Y-m-d H:i:s", $margeActualitzacio);
 	$result_producte = $utils->nousProductes($timestampACercar);
 	echo "PS_ICG_INTEGRATION: prestaProductes.php <br>\n";
-
-	if( $utils->myDB->num_rows($result_producte) > 0 ){//Hi ha productes a crear/actualitzar
+    $total_per_actualitzar = $utils->myDB->num_rows($result_producte);
+	if( $total_per_actualitzar > 0 ){//Hi ha productes a crear/actualitzar
 		while($row_producte = $utils->myDB->fetch_array($result_producte))
 		{
 			$idProductePS = $utils->existeixProducte($row_producte['icg_producte']);
@@ -29,12 +33,13 @@ Script  per a consultar els productes creats a la taula integracio ICG i actuali
 					//Crear Producte
 					$idProductePS =  $utils->crearProducte($row_producte,$idFabricantPS);
 					//Crear grup atributs talla
-					$idGrupTalla = $utils->crearGrupTalla($row_producte, $idProductePS);
+					$idGrupTalla = $utils->crearGrupTallaColor($row_producte, $idProductePS, "talla");
 					//Crear grup atributs color
-					$idGrupColor = $utils->crearGrupColor($row_producte, $idProductePS);
+					$idGrupColor = $utils->crearGrupTallaColor($row_producte, $idProductePS, "color");
 
 					//Desar Producte/GrupTalla/GrupColor
 					$utils->desarProducteTallaColor($idProductePS,$idGrupTalla,$idGrupColor);
+					$productes_creats++;
 			}else{
 				//TODO: cas producte existent
 				//Consultar si el producte existeix realment a Prestashop?
@@ -43,24 +48,42 @@ Script  per a consultar els productes creats a la taula integracio ICG i actuali
 				$idGrupColor = $utils->getGrup($idProductePS, "ps_grup_color");
 				//echo "El producte $idProductePS ja existeix, i te un grup talla $idGrupTalla i color $idGrupColor<br>\n";
 			}
-			echo "Producte Atribut PS: ".$row_producte['ps_producte_atribut']."<br>";
+			//echo "Producte Atribut PS: ".$row_producte['ps_producte_atribut']."<br>";
 			if($row_producte['ps_producte_atribut'] == 0){
-				$nomTalla = $row_producte['icg_talla'];
+				$nomTalla = $utils->encodeToUtf8($row_producte['icg_talla']);
 				$idTalla = $utils->inserirAtribut($row_producte, $idGrupTalla, $nomTalla);
-
-				$nomColor = $row_producte['icg_color'];
+				//echo "Talla inserida";
+				$nomColor = $utils->encodeToUtf8($row_producte['icg_color']);
 				$idColor = $utils->inserirAtribut($row_producte, $idGrupColor, $nomColor);
-
+				//echo "Color inserit";
 				$idCombination = $utils->inserirCombinacio($idProductePS, $idTalla, $idColor, $row_producte);
+				$combinacions_creades++;
+				//echo "Combinacio inserida";
 			}else{
-				echo "La combinacio ".$row_producte['ps_producte_atribut']." ja existeix. No cal fer res.<br>\n";
+				//echo "La combinacio ".$row_producte['ps_producte_atribut']." ja existeix. No cal fer res.<br>\n";
+				$productes_jaexistents++;
 			}
 
-			echo "Si hem arribat aqui, vol dir que s'ha creat o ja existia el producte $idProductePS a Prestashop amb la combinacio $idCombination<br>\n";
+			//echo "Si hem arribat aqui, vol dir que s'ha creat o ja existia el producte $idProductePS a Prestashop amb la combinacio $idCombination<br>\n";
 
 			$utils->flagActualitzatProducte($row_producte);
 		}
 	}else{
-		echo date("Y-m-d H:i:s").": No	 hi ha productes a actualitzar.";
+		echo date("Y-m-d H:i:s").": No hi ha productes a actualitzar<br>\n";
 	}
+
+} catch (PDOException $e) {
+
+    //show exception
+    echo $e->getMessage();
+    print_r($row_producte);
+
+} finally {
+	echo "===============================<br>\n";
+	echo "Total a actualitzar: ".$total_per_actualitzar."<br>\n";
+	echo "Total de productes creats: ".$productes_creats."<br>\n";
+	echo "Total productes ja existents: ".$productes_jaexistents."<br>\n";
+	echo "Total de combinacions creades: ".$combinacions_creades."<br>\n";
+}
+
 ?>

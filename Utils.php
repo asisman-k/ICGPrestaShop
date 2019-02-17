@@ -72,7 +72,7 @@ class Utils
       $result_ps_fabricant = $this->myDB->consulta($consulta);
 
       if( $this->myDB->num_rows($result_ps_fabricant) > 0 ){
-        echo "El fabricant existex, no cal crear-lo <br>\n";
+        //echo "El fabricant existex, no cal crear-lo <br>\n";
         $row_fabricant = $this->myDB->fetch_array($result_ps_fabricant);
         return $row_fabricant['ps_fabricant'];
       }else{
@@ -89,7 +89,7 @@ class Utils
         $xmlCreate = $this->webService->get(array('url' => PS_SHOP_PATH.'/api/manufacturers?schema=blank'));
         $resourceCreate = $xmlCreate->children()->children();
 
-        $resourceCreate->name = utf8_encode($nomFabricantICG);
+        $resourceCreate->name = $this->encodeToUtf8($nomFabricantICG);
         $resourceCreate->active = 1;
 
         $optCreate['postXml'] = $xmlCreate->asXML();
@@ -98,7 +98,7 @@ class Utils
         $idFabricantPS = $xmlResponse->manufacturer->id;
 
         if($this->myDB->consulta("INSERT INTO icgps.icg_ps_fabricant (ps_fabricant, icg_fabricant) VALUES ($idFabricantPS,$idFabricantICG)")){
-          echo "Fabricant $idFabricantICG:$nomFabricantICG creat correctament al Prestashop amb num $idFabricantPS <br>\n";
+          //echo "Fabricant $idFabricantICG:$nomFabricantICG creat correctament al Prestashop amb num $idFabricantPS <br>\n";
         }
       }
 
@@ -130,9 +130,9 @@ class Utils
       $optCreate = array('resource' => 'products');
       $xmlCreate = $this->webService->get(array('url' => PS_SHOP_PATH.'/api/products?schema=blank'));
       $resourceCreate = $xmlCreate->children()->children();
-      $resourceCreate->name->language[0] = utf8_encode($row_producte['descripcio']);
-      $resourceCreate->name->language[1] = utf8_encode($row_producte['descripcio']);
-      $resourceCreate->name->language[2] = utf8_encode($row_producte['descripcio']);
+      $resourceCreate->name->language[0] = $this->encodeToUtf8($row_producte['descripcio']);
+      $resourceCreate->name->language[1] = $this->encodeToUtf8($row_producte['descripcio']);
+      $resourceCreate->name->language[2] = $this->encodeToUtf8($row_producte['descripcio']);
       if(isset($idFabricantPS)){
         $resourceCreate->id_manufacturer = $idFabricantPS;
       }
@@ -144,9 +144,11 @@ class Utils
       $resourceCreate->available_for_order = 1;
       $resourceCreate->show_price = 1;
       $resourceCreate->id_tax_rules_group = 1;
+      $resourceCreate->minimal_quantity = 1;
+      $resourceCreate->state = 1;
       //$resourceCreate->advanced_stock_management = 1;
-      $stringURL = str_replace(' ', '-', $row_producte['descripcio']); // Converts spaces to dashes
-      $stringURL = urlencode($stringURL);
+      //TODO: Convert àéï...
+      $stringURL = $this->creaUrlLink($row_producte['descripcio']); // Converts spaces to dashes
       $resourceCreate->link_rewrite->language[0] = $stringURL;
       $resourceCreate->link_rewrite->language[1] = $stringURL;
       $resourceCreate->link_rewrite->language[2] = $stringURL;
@@ -156,7 +158,7 @@ class Utils
       $idProductePS = $xmlResponse->product->id;
 
       if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte = ".$idProductePS." WHERE icg_producte = ".$row_producte['icg_producte'])){
-        echo "Producte ".$row_producte['icg_producte']." creat correctament a Prestashop amb num $idProductePS i el idFabricant $idFabricantPS <br>\n";
+        //echo "Producte ".$row_producte['icg_producte']." creat correctament a Prestashop amb num $idProductePS i el idFabricant $idFabricantPS <br>\n";
       }
 
       return $idProductePS;
@@ -164,49 +166,27 @@ class Utils
 
     /**
         BLOC GRUPS TALLA/COLOR
+
     */
-    /* Crear grup talla */
-    public function crearGrupTalla($row_producte, $idProductePS){
-      $idGrupTalla;
+    public function crearGrupTallaColor($row_producte, $idProductePS, $tipus){
+      $idGrupTallaColor;
       $optCreate = array('resource' => 'product_options');
       $xmlCreate = $this->webService->get(array('url' => PS_SHOP_PATH.'/api/product_options?schema=blank'));
       $resourceCreate = $xmlCreate->children()->children();
-      $resourceCreate->name->language[0] = $idProductePS."_talla";
-      $resourceCreate->name->language[1] = $idProductePS."_talla";
-      $resourceCreate->name->language[2] = $idProductePS."_talla";
-      $resourceCreate->public_name->language[0] = $idProductePS."_talla";
-      $resourceCreate->public_name->language[1] = $idProductePS."_talla";
-      $resourceCreate->public_name->language[2] = $idProductePS."_talla";
+      $resourceCreate->name->language[0] = $idProductePS."_".$tipus;
+      $resourceCreate->name->language[1] = $idProductePS."_".$tipus;
+      $resourceCreate->name->language[2] = $idProductePS."_".$tipus;
+      $resourceCreate->public_name->language[0] = $this->encodeToUtf8($row_producte['descripcio'])." ".$tipus;
+      $resourceCreate->public_name->language[1] = $this->encodeToUtf8($row_producte['descripcio'])." ".$tipus;
+      $resourceCreate->public_name->language[2] = $this->encodeToUtf8($row_producte['descripcio'])." ".$tipus;
       $resourceCreate->group_type = "select";
 
       $optCreate['postXml'] = $xmlCreate->asXML();
       $xmlResponse = $this->webService->add($optCreate);
       $idGrupTalla = $xmlResponse->product_option->id;
-      echo "El grup talla $idGrupTalla del producte PS $idProductePS s'ha creat correctament <br>\n";
+      //echo "El grup talla $idGrupTalla del producte PS $idProductePS s'ha creat correctament <br>\n";
 
       return $idGrupTalla;
-    }
-
-    /* Crear grup color */
-    public function crearGrupColor($row_producte, $idProductePS){
-      $idGrupColor;
-      $optCreate = array('resource' => 'product_options');
-      $xmlCreate = $this->webService->get(array('url' => PS_SHOP_PATH.'/api/product_options?schema=blank'));
-      $resourceCreate = $xmlCreate->children()->children();
-      $resourceCreate->name->language[0] = $idProductePS."_color";
-      $resourceCreate->name->language[1] = $idProductePS."_color";
-      $resourceCreate->name->language[2] = $idProductePS."_color";
-      $resourceCreate->public_name->language[0] = $idProductePS."_color";
-      $resourceCreate->public_name->language[1] = $idProductePS."_color";
-      $resourceCreate->public_name->language[2] = $idProductePS."_color";
-      $resourceCreate->group_type = "select";
-
-      $optCreate['postXml'] = $xmlCreate->asXML();
-      $xmlResponse = $this->webService->add($optCreate);
-      $idGrupColor = $xmlResponse->product_option->id;
-      echo "El grup color $idGrupColor del producte PS $idProductePS s'ha creat correctament <br>\n";
-
-      return $idGrupColor;
     }
 
     /* Desar grups Talla Color d'un producte */
@@ -217,7 +197,6 @@ class Utils
         echo "Error: No s'ha pogut crear entrada ProducteTallaColor per: $idProductePS,$idGrupTalla,$idGrupColor <br>\n";
       }
     }
-
 
     /*
     A partir d'un ID d'atribut, consulta el nom en llengua ICG = 4
@@ -259,23 +238,25 @@ class Utils
     public function inserirAtribut($row_producte, $idGrupAtribut, $nomAtribut){
       //echo "Dins inserir atribut: $idGrupAtribut, $nomAtribut <br>\n";
       $idAtribut = self::existeixAtribut($idGrupAtribut,$nomAtribut);
+      //echo "Existeix atribuit? ".$idAtribut."<br>";
 
       if(!$idAtribut){
+        //echo $idGrupAtribut." - ".$nomAtribut." no existeixen, anem a inserir-los";
         $optCreate = array('resource' => 'product_option_values');
         $xmlCreate = $this->webService->get(array('url' => PS_SHOP_PATH.'/api/product_option_values?schema=blank'));
         $resourceCreate = $xmlCreate->children()->children();
         $resourceCreate->id_attribute_group = $idGrupAtribut;
         
-        $resourceCreate->name->language[0] = $nomAtribut;
-        $resourceCreate->name->language[1] = $nomAtribut;
-        $resourceCreate->name->language[2] = $nomAtribut;
+        $resourceCreate->name->language[0] = $this->encodeToUtf8($nomAtribut);
+        $resourceCreate->name->language[1] = $this->encodeToUtf8($nomAtribut);
+        $resourceCreate->name->language[2] = $this->encodeToUtf8($nomAtribut);
 
         $optCreate['postXml'] = $xmlCreate->asXML();
         $xmlResponse = $this->webService->add($optCreate);
         $idAtribut = $xmlResponse->product_option_value->id;
-        echo "El atribut $idAtribut amb nom $nomAtribut s'ha creat correctament en el grup $idGrupAtribut <br>\n";
+        //echo "El atribut $idAtribut amb nom $nomAtribut s'ha creat correctament en el grup $idGrupAtribut <br>\n";
       }else{
-        echo "El atribut $idAtribut amb nom $nomAtribut ja estava creada correctament en el grup $idGrupAtribut <br>\n";
+        //echo "El atribut $idAtribut amb nom $nomAtribut ja estava creada correctament en el grup $idGrupAtribut <br>\n";
       }
 
       return $idAtribut;
@@ -291,8 +272,6 @@ class Utils
       return $row_producte["$tipus"];
     }
 
-
-
     /**
         BLOC COMBINACIONS
     */
@@ -304,7 +283,7 @@ class Utils
             $xmlCreate = $this->webService->get(array('url' => PS_SHOP_PATH.'/api/combinations?schema=blank'));
             $resourceCreate = $xmlCreate->children()->children();
             $resourceCreate->id_product = $idProductePS;
-            $resourceCreate->minimal_quantity = 0;
+            $resourceCreate->minimal_quantity = 1;
             $resourceCreate->ean13 = $row_producte['ean13'];
             $resourceCreate->associations->product_option_values->product_option_value->id = $idTalla;
             $product_option_value = $resourceCreate->associations->product_option_values->addChild('product_option_value');
@@ -314,10 +293,10 @@ class Utils
             $xmlResponse = $this->webService->add($optCreate);
             $idCombinacio = $xmlResponse->combination->id;
 
-            if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$row_producte['icg_color']."' AND icg_talla = '".$row_producte['icg_talla']."'")){
-              $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$row_producte['icg_color']."' AND icg_talla = '".$row_producte['icg_talla']."'");
-              $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$row_producte['icg_color']."' AND icg_talla = '".$row_producte['icg_talla']."'");
-              echo "inserirCombinacio: La combinacio $idCombinacio ($idTalla,$idColor) s'ha creat correctament <br>\n";
+            if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'")){
+              $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'");
+              $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'");
+              //echo "inserirCombinacio: La combinacio $idCombinacio ($idTalla,$idColor) s'ha creat correctament <br>\n";
             }
 
 
@@ -342,7 +321,7 @@ class Utils
           //Per a cada nou stock
         	if($result)
         	{
-        			echo "El stock del producte ($idProductePS _ $idAtributPS) s'ha actualitzat correctament a $stock";
+        			//echo "El stock del producte ($idProductePS _ $idAtributPS) s'ha actualitzat correctament a $stock";
         	}
 
         }
@@ -353,9 +332,6 @@ class Utils
         }
 
 
-
-
-
         /**
         BLOC PREUS
         */
@@ -364,7 +340,18 @@ class Utils
           //Obtenir XML
           $optUpdate = array('resource' => 'combinations');
           $optUpdate['id'] = $producte['ps_producte_atribut'];
-          $xmlUpdate = $this->webService->get($optUpdate);
+          $xmlUpdate = 0;
+          try{
+            $xmlUpdate = $this->webService->get($optUpdate);
+          }catch (Exception $e){
+            //La combinació no existeix a Prestashop, tenim dades incorrectes a la BD d'integració
+            echo $e->getMessage();
+            print("<pre>".print_r($optUpdate,true)."</pre>");
+            print("<pre>".print_r($producte,true)."</pre>");
+            return false;
+          }
+
+          
           $resourceUpdate = $xmlUpdate->children()->children();
 
           //Modificar XML
@@ -374,12 +361,8 @@ class Utils
           $optUpdate['putXml'] = $xmlUpdate->asXML();
           $optUpdate['id'] = $producte['ps_producte_atribut'];
           $xmlResponse = $this->webService->edit($optUpdate);
-
+          return true;
         }
-
-
-
-
 
         public function existeixDescompte($producte){
           //echo "dins existeix descompte <br>\n";
@@ -452,6 +435,37 @@ class Utils
 
         public function flagActualitzatPreus($row_producte){
           $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET flag_actualitzat = 0 WHERE id = ".$row_producte['id']);
+        }
+
+        /* Utils genèrics */
+        public function encodeToUtf8($string) {
+          return mb_convert_encoding($string, "UTF-8", mb_detect_encoding($string, "UTF-8, ISO-8859-1, ISO-8859-15", true));
+        }
+        public function creaUrlLink($s) {
+          
+          $s = preg_replace("/á|à|â|ã|ª|ä/","a",$s);
+          $s = preg_replace("/Á|À|Â|Ã|Ä/","A",$s);
+          $s = preg_replace("/é|è|ê|ë/","e",$s);
+          $s = preg_replace("/É|È|Ê|Ë/","E",$s);
+          $s = preg_replace("/í|ì|î|ï/","i",$s);
+          $s = preg_replace("/Í|Ì|Î|Ï/","I",$s);
+          $s = preg_replace("/ó|ò|ô|õ|º|ö/","o",$s);
+          $s = preg_replace("/Ó|Ò|Ô|Õ|Ö/","O",$s);
+          $s = preg_replace("/ú|ù|û|ü/","u",$s);
+          $s = preg_replace("/Ú|Ù|Û|Ü/","U",$s);
+          $s = str_replace("ñ","n",$s);
+          $s = str_replace("Ñ","N",$s);
+          $s = str_replace("ç","c",$s);
+          $s = str_replace("Ç","C",$s);          
+          $s = strtolower($s);
+
+          $s = str_replace("'", "" , $s);
+          $s = str_replace('%20', ' ', $s);//$s = str_replace(" ","_",$s);
+          $s = preg_replace('~[^\pL0-9_]+~u', '-', $s);
+          $s = trim($s, "-");
+          $s = iconv("utf-8", "us-ascii//TRANSLIT", $s);
+          $s = preg_replace('~[^-a-z0-9_]+~', "", $s);
+          return $s;
         }
 }
 ?>
