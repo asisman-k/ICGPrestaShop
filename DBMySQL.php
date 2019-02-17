@@ -47,6 +47,10 @@ class MySQL{
    public function mysql_affected_rows(){
       return mysqli_affected_rows($this->conexion);
    }
+
+   public function getConexion() {
+      return $this->conexion;
+   }
 }
 
 

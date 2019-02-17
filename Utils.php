@@ -452,6 +452,11 @@ class Utils
 
         public function flagActualitzatPreus($row_producte){
           $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET flag_actualitzat = 0 WHERE id = ".$row_producte['id']);
+	}
+
+        public function parseja($response){
+                return $this->webService->parseXML($response);
         }
+
 }
 ?>

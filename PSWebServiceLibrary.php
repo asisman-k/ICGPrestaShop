@@ -172,7 +172,7 @@ class PrestaShopWebservice
 	 * @param string $response String from a CURL response
 	 * @return SimpleXMLElement status_code, response
 	 */
-	protected function parseXML($response)
+	public function parseXML($response)
 	{
 		if ($response != '')
 		{
