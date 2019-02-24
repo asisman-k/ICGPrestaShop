@@ -11,7 +11,7 @@ Script  per a consultar els preus dels productes creats a la taula integració I
 	$margeActualitzacio = strtotime("-60 minutes");
 	$timestampACercar = date("Y-m-d H:i:s", $margeActualitzacio);
 	$result_producte = $utils->nousPreus($timestampACercar);
-	echo "PS_ICG_INTEGRATION: prestaPreus.php <br>\n";
+	//echo "PS_ICG_INTEGRATION: prestaPreus.php <br>\n";
 
     $total_per_actualitzar = $utils->myDB->num_rows($result_producte);
     $preu_actualitzat = 0;
@@ -37,10 +37,12 @@ Script  per a consultar els preus dels productes creats a la taula integració I
 				}
 		}
 	}else{
-		echo date("Y-m-d H:i:s").": No hi ha preus a actualitzar.";
+		//echo date("Y-m-d H:i:s").": No hi ha preus a actualitzar.";
 	}
-	echo "====================<br>\n";
-	echo "Total preus per actualitzar: ".$total_per_actualitzar."<br>\n";
-	echo "Total preus actualitzats: ".$preu_actualitzat."<br>\n";
 
+	//if($preu_actualitzat){
+	//	echo "====================<br>\n";
+	//	echo "Total preus per actualitzar: ".$total_per_actualitzar."<br>\n";
+	//	echo "Total preus actualitzats: ".$preu_actualitzat."<br>\n";
+	//}
 ?>
