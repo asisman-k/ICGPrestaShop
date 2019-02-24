@@ -4,19 +4,21 @@ Programa 1:
 Data creació: 20150102
 Script  per a consultar els productes creats a la taula integracio ICG i actualitzar el model de dades a Prestashop
 */
-	require_once("Utils.php");
+require_once("Utils.php");
 
-	$utils = new Utils();
-    $productes_creats = 0;
-    $combinacions_creades = 0;
-    $total_per_actualitzar=0;
-    $productes_jaexistents = 0;
+$utils = new Utils();
+$productes_creats = 0;
+$combinacions_creades = 0;
+$total_per_actualitzar=0;
+$productes_jaexistents = 0;
+$combinacions_error = 0;
+
 try {
 	//Consulta productes creats nous
 	$margeActualitzacio = strtotime("-60 minutes");
 	$timestampACercar = date("Y-m-d H:i:s", $margeActualitzacio);
 	$result_producte = $utils->nousProductes($timestampACercar);
-	echo "PS_ICG_INTEGRATION: prestaProductes.php <br>\n";
+	//echo "PS_ICG_INTEGRATION: prestaProductes.php <br>\n";
     $total_per_actualitzar = $utils->myDB->num_rows($result_producte);
 	if( $total_per_actualitzar > 0 ){//Hi ha productes a crear/actualitzar
 		while($row_producte = $utils->myDB->fetch_array($result_producte))
@@ -41,8 +43,6 @@ try {
 					$utils->desarProducteTallaColor($idProductePS,$idGrupTalla,$idGrupColor);
 					$productes_creats++;
 			}else{
-				//TODO: cas producte existent
-				//Consultar si el producte existeix realment a Prestashop?
 				//Consulta $idGrupTalla i $idGrupColor a la taula ps_producte_t_c
 				$idGrupTalla = $utils->getGrup($idProductePS, "ps_grup_talla");
 				$idGrupColor = $utils->getGrup($idProductePS, "ps_grup_color");
@@ -57,8 +57,14 @@ try {
 				$idColor = $utils->inserirAtribut($row_producte, $idGrupColor, $nomColor);
 				//echo "Color inserit";
 				$idCombination = $utils->inserirCombinacio($idProductePS, $idTalla, $idColor, $row_producte);
-				$combinacions_creades++;
-				//echo "Combinacio inserida";
+				if($idCombination){
+					$combinacions_creades++;
+					//echo "Combinacio inserida";
+				}else{
+					$combinacions_error++;
+				}
+				
+				
 			}else{
 				//echo "La combinacio ".$row_producte['ps_producte_atribut']." ja existeix. No cal fer res.<br>\n";
 				$productes_jaexistents++;
@@ -69,21 +75,23 @@ try {
 			$utils->flagActualitzatProducte($row_producte);
 		}
 	}else{
-		echo date("Y-m-d H:i:s").": No hi ha productes a actualitzar<br>\n";
+		//echo date("Y-m-d H:i:s").": No hi ha productes a actualitzar<br>\n";
 	}
 
 } catch (PDOException $e) {
-
     //show exception
     echo $e->getMessage();
     print_r($row_producte);
 
 } finally {
-	echo "===============================<br>\n";
-	echo "Total a actualitzar: ".$total_per_actualitzar."<br>\n";
-	echo "Total de productes creats: ".$productes_creats."<br>\n";
-	echo "Total productes ja existents: ".$productes_jaexistents."<br>\n";
-	echo "Total de combinacions creades: ".$combinacions_creades."<br>\n";
+	//if($combinacions_creades){
+		//echo "===============================<br>\n";
+		//echo "Total a actualitzar: ".$total_per_actualitzar."<br>\n";
+		//echo "Total de productes creats: ".$productes_creats."<br>\n";
+		//echo "Total de combinacions creades: ".$combinacions_creades."<br>\n";
+		//echo "Total productes ja existents: ".$productes_jaexistents."<br>\n";
+		//echo "Total de combinacions amb error: ".$combinacions_error."<br>\n";
+	//}
 }
 
 ?>
