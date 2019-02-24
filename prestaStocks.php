@@ -13,7 +13,7 @@ Script  per a consultar el stock de la taula integració ICG i actualitzar-lo al
 	$timestampACercar = date("Y-m-d H:i:s", $margeActualitzacio);
 	$result_producte = $utils->nousStocks($timestampACercar);
 
-	echo "PS_ICG_INTEGRATION: prestaStocks.php <br>\n";
+	//echo "PS_ICG_INTEGRATION: prestaStocks.php <br>\n";
     $total_per_actualitzar = $utils->myDB->num_rows($result_producte);
     $stocks_actualitzat = 0;
 	if( $total_per_actualitzar > 0 ){//Hi ha productes a crear/actualitzar
@@ -29,9 +29,11 @@ Script  per a consultar el stock de la taula integració ICG i actualitzar-lo al
 			}
 		}
 	}else{
-		echo date("Y-m-d H:i:s").": No	hi ha stocks a actualitzar.";
+		//echo date("Y-m-d H:i:s").": No	hi ha stocks a actualitzar.";
 	}
-	echo "=====================<br>\n";
-	echo "Total stocks per actualitzar: ".$total_per_actualitzar."<br>\n";
-	echo "Total stocks actualitzats: ".$stocks_actualitzat."<br>\n";
+	//if($stocks_actualitzat){
+	//	echo "=====================<br>\n";
+	//	echo "Total stocks per actualitzar: ".$total_per_actualitzar."<br>\n";
+	//	echo "Total stocks actualitzats: ".$stocks_actualitzat."<br>\n";
+	//}
 ?>
