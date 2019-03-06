@@ -6,7 +6,7 @@ You need some views prepared in MS SQL Server and access avaiable from outside i
 
 ## Prestashop
 You need to create a database (maybe in the same server of your Prestashop) and create integration tables
-*  TODO
+*  [Integration database schema](https://github.com/oriolpiera/ICGPrestaShop/blob/master/integration_tables.sql)
 
 Also you need to activate WebService in your Prestashop installation.
 
