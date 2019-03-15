@@ -319,6 +319,24 @@ class Utils
             return $idCombinacio;
         }
 
+        public function eliminarCombinacio($ps_producte, $ps_producte_atribut){
+            //$row_producte['ps_producte'],$row_producte['ps_producte_atribut']);
+            $optUpdate = array('resource' => 'combinations');
+            $optUpdate['id'] = $ps_producte_atribut;
+            $xmlUpdate = 0;
+            try{
+                $xmlUpdate = $this->webService->get($optUpdate);
+            }catch (Exception $e){
+                //La combinació no existeix a Prestashop, tenim dades incorrectes a la BD d'integració
+                echo $e->getMessage();
+                print("<pre>".print_r($optUpdate,true)."</pre>");
+                print("<pre>".print_r($ps_producte_atribut,true)."</pre>");
+                return false;
+            }
+            $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte_atribut = -1, flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);
+            $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET ps_producte_atribut = -1, flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);
+            $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET ps_producte_atribut = -1, flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);            
+        }
 
 
         public function flagActualitzatProducte($row_producte){
@@ -459,6 +477,7 @@ class Utils
 
         /* Utils genèrics */
         public function encodeToUtf8($string) {
+          $string = preg_replace("/{|}/","",$string);
           return mb_convert_encoding($string, "UTF-8", mb_detect_encoding($string, "UTF-8, ISO-8859-1, ISO-8859-15", true));
         }
 

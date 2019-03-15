@@ -63,10 +63,17 @@ try {
 				}else{
 					$combinacions_error++;
 				}
-				
-				
-			}else{
+			}elseif ($row_producte['ps_producte_atribut'] > 0){
 				//echo "La combinacio ".$row_producte['ps_producte_atribut']." ja existeix. No cal fer res.<br>\n";
+                //Comprovar que ha canviat
+                //Descatalogat?
+                if($row_producte['descatalogado'] = 'T'){
+                    $utils->eliminarCombinacio($row_producte['ps_producte'],$row_producte['ps_producte_atribut']);
+                }
+                //EAN?
+
+                //Visibilitat?
+                
 				$productes_jaexistents++;
 			}
 
@@ -84,14 +91,14 @@ try {
     print_r($row_producte);
 
 } finally {
-	//if($combinacions_creades){
-		//echo "===============================<br>\n";
-		//echo "Total a actualitzar: ".$total_per_actualitzar."<br>\n";
-		//echo "Total de productes creats: ".$productes_creats."<br>\n";
-		//echo "Total de combinacions creades: ".$combinacions_creades."<br>\n";
-		//echo "Total productes ja existents: ".$productes_jaexistents."<br>\n";
-		//echo "Total de combinacions amb error: ".$combinacions_error."<br>\n";
-	//}
+	if($combinacions_creades){
+		echo "===============================<br>\n";
+		echo "Total a actualitzar: ".$total_per_actualitzar."<br>\n";
+		echo "Total de productes creats: ".$productes_creats."<br>\n";
+		echo "Total de combinacions creades: ".$combinacions_creades."<br>\n";
+		echo "Total productes ja existents: ".$productes_jaexistents."<br>\n";
+		echo "Total de combinacions amb error: ".$combinacions_error."<br>\n";
+	}
 }
 
 ?>
