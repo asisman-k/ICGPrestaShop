@@ -64,7 +64,13 @@ class Utils
     public function totsProductesPS(){
       $consulta = "SELECT DISTINCT ps_producte FROM icgps.icg_ps_producte WHERE ps_producte != 0";
       return $this->myDB->consulta($consulta);
-    }    
+    }
+
+    /* Obtenir combinacions a tractar */
+    public function totsProductesPSSenseAtribut(){
+      $consulta = "SELECT ps_producte, icg_producte, icg_color, icg_talla, ean13 FROM icgps.icg_ps_producte WHERE ps_producte_atribut = -1";
+      return $this->myDB->consulta($consulta);
+    }
 
     /**
         BLOC FABRICANT
