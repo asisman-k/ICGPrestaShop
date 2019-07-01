@@ -18,12 +18,12 @@ Script  per a consultar els preus dels productes creats a la taula integració I
 	if( $total_per_actualitzar > 0 ){//Hi ha productes a crear/actualitzar
 		while($row_producte = $utils->myDB->fetch_array($result_producte))
 		{
-				if($row_producte['ps_producte_atribut'] == 0){
-					echo "ERR >> El producte ICG ".$row_producte['icg_producte']." no te PS producte atribut<br>\n";
+				if($row_producte['ps_producte_atribut'] < 1){
+					echo "ERR >> El producte ICG ".$row_producte['icg_producte']." no te PS producte atribut ".$row_producte['ps_producte_atribut']."<br>\n";
 				}else{
 					//print_r($row_producte);
 					if(!$utils->actualitzarPreus($row_producte)){
-						echo "ERR >> No existeix el producte PS ".$row_producte['ps_producte'].". Comprovar taula icg_ps_preus<br>\n";
+						//echo "ERR >> No existeix el producte ICG ".$row_producte['icg_producte']."  or ".$row_producte['icg_reference']." que es producte PS ".$row_producte['ps_producte']." i combinacio ".$row_producte['ps_producte_atribut'].". Comprovar taula icg_ps_preus<br>\n";
 						continue;
 					}
 					if($row_producte['dto_percent'] > 0){
@@ -40,9 +40,9 @@ Script  per a consultar els preus dels productes creats a la taula integració I
 		//echo date("Y-m-d H:i:s").": No hi ha preus a actualitzar.";
 	}
 
-	//if($preu_actualitzat){
-	//	echo "====================<br>\n";
-	//	echo "Total preus per actualitzar: ".$total_per_actualitzar."<br>\n";
-	//	echo "Total preus actualitzats: ".$preu_actualitzat."<br>\n";
-	//}
+	if($preu_actualitzat){
+		echo "====================<br>\n";
+		echo "Total preus per actualitzar: ".$total_per_actualitzar."<br>\n";
+		echo "Total preus actualitzats: ".$preu_actualitzat."<br>\n";
+	}
 ?>
