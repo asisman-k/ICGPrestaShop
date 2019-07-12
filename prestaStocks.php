@@ -19,8 +19,8 @@ Script  per a consultar el stock de la taula integració ICG i actualitzar-lo al
 	if( $total_per_actualitzar > 0 ){//Hi ha productes a crear/actualitzar
 		while($row_producte = $utils->myDB->fetch_array($result_producte))
 		{
-			if($row_producte['ps_producte_atribut'] == 0){
-				echo "ERR >> Hi ha un problema amb el producte: ".$row_producte['icg_producte']."<br>\n";
+			if($row_producte['ps_producte_atribut'] < 1){
+				//echo "ERR >> Hi ha un problema amb el producte ICG ".$row_producte['icg_producte']." or ".$row_producte['icg_reference']." amb producte PS ".$row_producte['ps_producte']." i la combinació ".$row_producte['ps_producte_atribut']."<br>\n";
 			}else{
 				$id = $utils->actualitzarStock($row_producte['ps_producte'], $row_producte['ps_producte_atribut'], $row_producte['stock_actual']);
 
@@ -31,9 +31,9 @@ Script  per a consultar el stock de la taula integració ICG i actualitzar-lo al
 	}else{
 		//echo date("Y-m-d H:i:s").": No	hi ha stocks a actualitzar.";
 	}
-	//if($stocks_actualitzat){
-	//	echo "=====================<br>\n";
-	//	echo "Total stocks per actualitzar: ".$total_per_actualitzar."<br>\n";
-	//	echo "Total stocks actualitzats: ".$stocks_actualitzat."<br>\n";
-	//}
+	if($stocks_actualitzat){
+		echo "=====================<br>\n";
+		echo "Total stocks per actualitzar: ".$total_per_actualitzar."<br>\n";
+		echo "Total stocks actualitzats: ".$stocks_actualitzat."<br>\n";
+	}
 ?>

@@ -12,6 +12,9 @@ $combinacions_creades = 0;
 $total_per_actualitzar=0;
 $productes_jaexistents = 0;
 $combinacions_error = 0;
+$combinacions_eliminades = 0;
+$combinacions_invisibilitzades = 0;
+$combinacions_revisibilitzades = 0;
 
 try {
 	//Consulta productes creats nous
@@ -46,11 +49,12 @@ try {
 				//Consulta $idGrupTalla i $idGrupColor a la taula ps_producte_t_c
 				$idGrupTalla = $utils->getGrup($idProductePS, "ps_grup_talla");
 				$idGrupColor = $utils->getGrup($idProductePS, "ps_grup_color");
-				//echo "El producte $idProductePS ja existeix, i te un grup talla $idGrupTalla i color $idGrupColor<br>\n";
+				echo "El producte $idProductePS ja existeix, i te un grup talla $idGrupTalla i color $idGrupColor<br>\n";
 			}
-			//echo "Producte Atribut PS: ".$row_producte['ps_producte_atribut']."<br>";
-			if($row_producte['ps_producte_atribut'] == 0){
-				$nomTalla = $utils->encodeToUtf8($row_producte['icg_talla']);
+
+			if($row_producte['ps_producte_atribut'] == 0 & $row_producte['descatalogado'] <> 'T' & $row_producte['visibleweb'] <> 'F'){
+    		    //echo "La combinació és nova i a ICG esta posat per exisitir a la web, doncs la creem";
+                $nomTalla = $utils->encodeToUtf8($row_producte['icg_talla']);
 				$idTalla = $utils->inserirAtribut($row_producte, $idGrupTalla, $nomTalla);
 				//echo "Talla inserida";
 				$nomColor = $utils->encodeToUtf8($row_producte['icg_color']);
@@ -64,24 +68,88 @@ try {
 					$combinacions_error++;
 				}
 			}elseif ($row_producte['ps_producte_atribut'] > 0){
-				//echo "La combinacio ".$row_producte['ps_producte_atribut']." ja existeix. No cal fer res.<br>\n";
+				echo "La combinacio ".$row_producte['ps_producte_atribut']." ens consta que ja existeix a PS <br>\n";
                 //Comprovar que ha canviat
                 //Descatalogat?
-                if($row_producte['descatalogado'] = 'T'){
-                    $utils->eliminarCombinacio($row_producte['ps_producte'],$row_producte['ps_producte_atribut']);
+                if($row_producte['descatalogado'] == 'T'){
+                    echo "La combinació esta descatalogada, anem a esborrar-la: ".$row_producte['ps_producte_atribut']."<br>\n";
+                    if($utils->eliminarCombinacio($row_producte['ps_producte'],$row_producte['ps_producte_atribut'])){
+                        $combinacions_eliminades++;
+                    }
+                    
+                }
+                //Visibilitat?
+                if($row_producte['visibleweb'] == 'F'){
+                    echo "Hem trobat un producte per invisibilitzar a la web: ".$row_producte['icg_producte']." or ".$row_producte['icg_reference']." <br>\n";
+                    if($utils->canviVisibilitatProducte($row_producte['ps_producte'], $row_producte['ps_producte_atribut'],0)){
+                        $combinacions_invisibilitzades++;
+                    }else{
+                        echo "No hem pogut invisbilitzar \n";
+                    }
                 }
                 //EAN?
 
-                //Visibilitat?
+                if($row_producte['icg_reference'] <> '' & $row_producte['visibleweb'] <> 'F' & $row_producte['descatalogado'] <> 'T'){
+                    echo "Hem trobat un producte per actualitzar la referencia: ".$row_producte['icg_producte']." or ".$row_producte['icg_reference']." <br>\n";
+                    if($utils->actualitzarReferencia($row_producte['ps_producte'], $row_producte['icg_reference'])){
+                        echo "Referencia actualitzada ".$row_producte['icg_reference']."\n";
+                    }else{
+                        echo "No hem pogut actualitzar referencia ".$row_producte['icg_reference']." de ".$row_producte['ps_producte']."\n";
+                    }
+                }
+				$productes_jaexistents++;
                 
+    		}elseif ($row_producte['ps_producte_atribut'] < -1){
+                $idCombinacio = $row_producte['ps_producte_atribut']*-1;
+                if($row_producte['ps_producte'] < -1){
+                    $row_producte['ps_producte'] = $row_producte['ps_producte']*-1;
+                }
+
+				echo "La combinacio ".$row_producte['ps_producte_atribut']." ja existeix però no esta activa.<br>\n";
+                //Comprovar que ha canviat
+                //Descatalogat = F (hauriem de tornar a crear)
+                
+                //Visibilitat?
+                if($row_producte['visibleweb'] == 'T'){
+                    echo "Hem trobat un producte per visibilitzar a la web: ".$row_producte['icg_producte']."  or ".$row_producte['icg_reference']." <br>\n";
+                    if($utils->canviVisibilitatProducte($row_producte['ps_producte'], $idCombinacio, 1)){
+                        $combinacions_revisibilitzades++;
+                    }else{
+                        echo "No hem pogut invisbilitzar \n";
+                    }
+                }
+                if($row_producte['visibleweb'] == 'F'){
+                    echo "Hem trobat un producte per invisibilitzar a la web: ".$row_producte['icg_producte']." or ".$row_producte['icg_reference']." <br>\n";
+                    if($utils->canviVisibilitatProducte($row_producte['ps_producte'], $row_producte['ps_producte_atribut'],0)){
+                        $combinacions_invisibilitzades++;
+                    }else{
+                        echo "No hem pogut invisbilitzar \n";
+                    }
+                }
+            }elseif ($row_producte['ps_producte_atribut'] == 0){
+                //Visibilitat?
+                if($row_producte['ps_producte'] < -1 & $row_producte['visibleweb'] == 'T'){
+                    echo "Hem trobat un producte per visibilitzar a la web: ".$row_producte['icg_producte']."  or ".$row_producte['icg_reference']." <br>\n";
+                    if($utils->canviVisibilitatProducte($row_producte['ps_producte'], $row_producte['ps_producte_atribut'], 1)){
+                        $combinacions_revisibilitzades++;
+                    }else{
+                        echo "No hem pogut invisbilitzar \n";
+                    }
+                }
+                if($row_producte['ps_producte'] > 1 & $row_producte['visibleweb'] == 'F'){
+                    echo "Hem trobat un producte per invisibilitzar a la web: ".$row_producte['icg_producte']." or ".$row_producte['icg_reference']." <br>\n";
+                    if($utils->canviVisibilitatProducte($row_producte['ps_producte'], $row_producte['ps_producte_atribut'],0)){
+                        $combinacions_invisibilitzades++;
+                    }else{
+                        echo "No hem pogut invisbilitzar \n";
+                    }
+                }
 				$productes_jaexistents++;
 			}
-
 			//echo "Si hem arribat aqui, vol dir que s'ha creat o ja existia el producte $idProductePS a Prestashop amb la combinacio $idCombination<br>\n";
-
 			$utils->flagActualitzatProducte($row_producte);
 		}
-	}else{
+    }else{
 		//echo date("Y-m-d H:i:s").": No hi ha productes a actualitzar<br>\n";
 	}
 
@@ -91,13 +159,16 @@ try {
     print_r($row_producte);
 
 } finally {
-	if($combinacions_creades){
+	if($combinacions_creades || $combinacions_eliminades || $combinacions_invisibilitzades){
 		echo "===============================<br>\n";
 		echo "Total a actualitzar: ".$total_per_actualitzar."<br>\n";
 		echo "Total de productes creats: ".$productes_creats."<br>\n";
 		echo "Total de combinacions creades: ".$combinacions_creades."<br>\n";
 		echo "Total productes ja existents: ".$productes_jaexistents."<br>\n";
 		echo "Total de combinacions amb error: ".$combinacions_error."<br>\n";
+        echo "Total combiancions eliminades a PS: ".$combinacions_eliminades."<br>\n";
+        echo "Total productes invisibilitzats: ".$combinacions_invisibilitzades."<br>\n";
+        echo "Total productes revisibilitzats: ".$combinacions_revisibilitzades."<br>\n";
 	}
 }
 

@@ -50,13 +50,13 @@ class Utils
 
     /* Obtenir productes a tractar */
     public function nousStocks($timestampACercar){
-      $consulta = "SELECT * FROM icgps.icg_ps_stocks WHERE flag_actualitzat = 1";
+      $consulta = "SELECT * FROM icgps.icg_ps_stocks WHERE flag_actualitzat = 1 AND ps_producte_atribut > 0 ";
       return $this->myDB->consulta($consulta);
     }
 
     /* Obtenir productes a tractar */
     public function nousPreus($timestampACercar){
-      $consulta = "SELECT * FROM icgps.icg_ps_preus WHERE flag_actualitzat = 1";
+      $consulta = "SELECT * FROM icgps.icg_ps_preus WHERE flag_actualitzat = 1 AND ps_producte_atribut > 0 ";
       return $this->myDB->consulta($consulta);
     }
 
@@ -167,7 +167,11 @@ class Utils
       $resourceCreate->id_tax_rules_group = 1;
       $resourceCreate->minimal_quantity = 1;
       $resourceCreate->state = 1;
-      $resourceCreate->reference = $row_producte['icg_producte'];
+      if($row_producte['icg_reference']){
+        $resourceCreate->reference = $row_producte['icg_reference'];  
+      }else{//Legacy
+        $resourceCreate->reference = $row_producte['icg_producte'];    
+      }
       //$resourceCreate->advanced_stock_management = 1;
       //TODO: Convert àéï...
       $stringURL = $this->creaUrlLink($row_producte['descripcio']); // Converts spaces to dashes
@@ -179,7 +183,7 @@ class Utils
       $xmlResponse = $this->webService->add($optCreate);
       $idProductePS = $xmlResponse->product->id;
 
-      if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte = ".$idProductePS." WHERE icg_producte = ".$row_producte['icg_producte'])){
+      if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte = ".$idProductePS.",timestamp = '".date("Y-m-d H:i:s")."' WHERE icg_producte = ".$row_producte['icg_producte'])){
         //echo "Producte ".$row_producte['icg_producte']." creat correctament a Prestashop amb num $idProductePS i el idFabricant $idFabricantPS <br>\n";
       }
 
@@ -295,10 +299,108 @@ class Utils
       return $row_producte["$tipus"];
     }
 
-    /**
-        BLOC COMBINACIONS
-    */
+    public function canviVisibilitatProducte($ps_producte, $ps_producte_atribut, $new_active){
+      //echo "obtenirNomAtribut <br>\n";
+        $optUpdate['resource'] = 'products';
+        $optUpdate['id'] = $ps_producte;
+        $xmlUpdate = 0;
+        try{
+            $xmlUpdate = $this->webService->get($optUpdate);
+        }catch (Exception $e){
+            //La combinació no existeix a Prestashop, tenim dades incorrectes a la BD d'integració
+            echo $e->getMessage();
+            print("<pre>".print_r($optUpdate,true)."</pre>");
+            print("<pre>".print_r($producte,true)."</pre>");
+            return false;
+        }
+        
+        $active = $xmlUpdate->product->active;
+        
+        if($active == $new_active){
+            echo "No fem de fer res a PS";
+            if(!$new_active){
+                $new_ps_producte = intval($ps_producte) * -1;
+                $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$new_ps_producte.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte);
+                $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$new_ps_producte.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte);
+                $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$new_ps_producte.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte);
+            }
+            return true;
+        } else{
+            $resourceUpdate = $xmlUpdate->children()->children();
+            echo $resourceUpdate->active;
+            echo " - ";
+            //$new_active 0 is inactve, 1 is active
+            $resourceUpdate->active = $new_active;
+            echo $resourceUpdate->active;
+            unset($resourceUpdate->manufacturer_name);
+            unset($resourceUpdate->quantity);
+            
+            //Enviar XML
+            $optUpdate['putXml'] = $xmlUpdate->asXML();
+            $optUpdate['id'] = $ps_producte;
+            try{
+                $xmlResponse = $this->webService->edit($optUpdate);
+            }catch (Exception $e){
+                echo $e->getMessage();
+                print("<pre>".print_r($optUpdate,true)."</pre>");
+                print("<pre>".print_r($producte,true)."</pre>");
+                return false;
+            }
+            
+            $new_ps_producte = intval($ps_producte) * -1;
+            $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$new_ps_producte.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte);
+            $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$new_ps_producte.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte);
+            $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$new_ps_producte.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte);
 
+            return true;
+        }
+    }
+
+
+    public function actualitzarReferencia($ps_producte, $icg_reference){
+      //echo "obtenirNomAtribut <br>\n";
+        $optUpdate['resource'] = 'products';
+        $optUpdate['id'] = $ps_producte;
+        $xmlUpdate = 0;
+        try{
+            $xmlUpdate = $this->webService->get($optUpdate);
+        }catch (Exception $e){
+            //La combinació no existeix a Prestashop, tenim dades incorrectes a la BD d'integració
+            echo $e->getMessage();
+            print("<pre>".print_r($optUpdate,true)."</pre>");
+            print("<pre>".print_r($producte,true)."</pre>");
+            return false;
+        }
+
+        $reference = $xmlUpdate->product->reference;
+        
+        if($reference <> $icg_reference){
+            $resourceUpdate = $xmlUpdate->children()->children();
+            echo $resourceUpdate->reference;
+            echo " - ";
+            echo $icg_reference;
+            //$new_active 0 is inactve, 1 is active
+            $resourceUpdate->reference = $icg_reference;
+            echo $resourceUpdate->reference;
+            unset($resourceUpdate->manufacturer_name);
+            unset($resourceUpdate->quantity);
+            
+            //Enviar XML
+            $optUpdate['putXml'] = $xmlUpdate->asXML();
+            $optUpdate['id'] = $ps_producte;
+            $xmlResponse = $this->webService->edit($optUpdate);
+
+            return true;
+        }
+        return false;
+    }
+
+
+
+
+    /**
+        BLOC COMBINACIONS  icgps.ps_producte_atribut
+    */
         /* Inserir combinacio */
         public function inserirCombinacio($idProductePS, $idTalla, $idColor, $row_producte){
 
@@ -316,14 +418,70 @@ class Utils
             $xmlResponse = $this->webService->add($optCreate);
             $idCombinacio = $xmlResponse->combination->id;
 
-            if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'")){
-              $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio.", flag_actualitzat = 1 WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'");
-              $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio.", flag_actualitzat = 1 WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'");
+            if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio." WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'")){
+              $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio.", flag_actualitzat = 1 WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'");
+              $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$idProductePS.", ps_producte_atribut = ".$idCombinacio.", flag_actualitzat = 1 WHERE icg_producte = ".$row_producte['icg_producte']." AND icg_color = '".$this->encodeToUtf8($row_producte['icg_color'])."' AND icg_talla = '".$this->encodeToUtf8($row_producte['icg_talla'])."'");
               //echo "inserirCombinacio: La combinacio $idCombinacio ($idTalla,$idColor) s'ha creat correctament <br>\n";
             }
 
             return $idCombinacio;
         }
+
+
+    public function existeixCombinacioIntegracio($idCombinacio){
+        $sql = "SELECT * FROM `icg_ps_producte` where `ps_producte_atribut` = ".$idCombinacio;
+        if($this->myDB->num_rows($this->myDB->consulta($sql)) > 0){
+            return True;
+        }
+        return False;
+    }
+
+
+    /* Consultar si existeix una combinació dins d'un producte */
+    public function existeixCombinacio($idProductePS,$nomTalla, $nomColor){
+      //echo "Dins grup $idPro existeix atribut: $nomAtribut <br>\n";
+      $opt['resource'] = 'products';
+      $opt['id'] = $idProductePS;
+      $xml = $this->webService->get($opt);
+      #echo "* PRODUCTE ".$idProductePS." TALLA ".$nomTalla." COLOR ".$nomColor."\n";
+      foreach($xml->product->associations->combinations->combination as $idCombinacio){
+          if(self::existeixCombinacioIntegracio($idCombinacio->id)){
+              #echo "Ens hem estalviat consulta ".$idCombinacio->id."\n";
+            continue;
+          }else{
+              #echo "Somhi".$idCombinacio->id."\n";
+          }
+        $opt2['resource'] = 'combinations';
+        $opt2['id'] = $idCombinacio->id;
+        #echo "Provem la combinació: ".$idCombinacio->id."\n";
+        $xml2 = $this->webService->get($opt2);
+
+        $colorTrobat = false;
+        $tallaTrobada = false;
+
+        foreach($xml2->combination->associations->product_option_values->product_option_value as $idProductOption){
+            $nomActual = self::obtenirNomAtribut($idProductOption->id);
+            #echo "- Provem: ".$nomActual."\n";
+            if($nomActual == $nomTalla){
+                $tallaTrobada = True;
+                #echo "- - Hem trobat talla: ".$nomActual."\n";
+            }
+            if($nomActual == $nomColor){
+                $colorTrobat = True;
+                #echo "- - Hem trobat color: ".$nomActual."\n";
+            }
+        }
+        if($tallaTrobada & $colorTrobat){
+            $colorTrobat = false;
+            $tallaTrobada = false;
+            return $idCombinacio->id;
+        }
+      }
+    return false;
+
+    }
+
+
 
         public function eliminarCombinacio($ps_producte, $ps_producte_atribut){
             //$row_producte['ps_producte'],$row_producte['ps_producte_atribut']);
@@ -336,17 +494,32 @@ class Utils
                 //La combinació no existeix a Prestashop, tenim dades incorrectes a la BD d'integració
                 echo $e->getMessage();
                 print("<pre>".print_r($optUpdate,true)."</pre>");
+                print("<pre>".print_r($ps_producte,true)."</pre>");
                 print("<pre>".print_r($ps_producte_atribut,true)."</pre>");
                 return false;
             }
-            $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte_atribut = -1, flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);
-            $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET ps_producte_atribut = -1, flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);
-            $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET ps_producte_atribut = -1, flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);            
+            
+            $url = "https://casapiera.com/versio17/api/combinations/".$ps_producte_atribut."?ps_method=DELETE";
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_HEADER, 0);
+            curl_setopt($ch, CURLOPT_USERPWD, PS_WS_AUTH_KEY.':');
+            try{
+                curl_exec($ch);
+            }catch (Exception $e){
+                echo $e->getMessage();
+                return false;
+            }
+
+            $new_ps_producte_atribut = intval($ps_producte_atribut) * -1;
+            $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte_atribut = ".$new_ps_producte_atribut.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);
+            $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte_atribut = ".$new_ps_producte_atribut.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);
+            $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte_atribut = ".$new_ps_producte_atribut.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte." AND ps_producte_atribut =".$ps_producte_atribut);            
         }
 
 
         public function flagActualitzatProducte($row_producte){
-          $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET flag_actualitzat = 0 WHERE id = ".$row_producte['id']);
+          $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET timestamp = '".date("Y-m-d H:i:s")."', flag_actualitzat = 0 WHERE id = ".$row_producte['id']);
         }
 
 
@@ -362,13 +535,16 @@ class Utils
           if($result)
           {
               //echo "El stock del producte ($idProductePS _ $idAtributPS) s'ha actualitzat correctament a $stock";
+          }else{
+              echo "No s'ha pogut actualitzar stock: ".idProductePS." - ".idAtributPS;
+              $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET timestamp = '".date("Y-m-d H:i:s")."', flag_actualitzat = 0 WHERE ps_producte = ".$idProductePS."ps_producte_atribut = ".$idAtributPS);
           }
 
         }
 
 
         public function flagActualitzatStock($row_producte){
-          $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET flag_actualitzat = 0 WHERE id = ".$row_producte['id']);
+          $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET timestamp = '".date("Y-m-d H:i:s")."', flag_actualitzat = 0 WHERE id = ".$row_producte['id']);
         }
 
 
@@ -385,13 +561,13 @@ class Utils
             $xmlUpdate = $this->webService->get($optUpdate);
           }catch (Exception $e){
             //La combinació no existeix a Prestashop, tenim dades incorrectes a la BD d'integració
-            echo $e->getMessage();
-            print("<pre>".print_r($optUpdate,true)."</pre>");
-            print("<pre>".print_r($producte,true)."</pre>");
+            //echo $e->getMessage();
+            //print("<pre>".print_r($optUpdate,true)."</pre>");
+            //print("<pre>".print_r($producte,true)."</pre>");
+            echo $producte['ps_producte_atribut'].",";
             return false;
           }
 
-          
           $resourceUpdate = $xmlUpdate->children()->children();
 
           //Modificar XML
@@ -484,11 +660,11 @@ class Utils
         /* Utils genèrics */
         public function encodeToUtf8($string) {
           $string = preg_replace("/{|}/","",$string);
+          $string = preg_replace("/'/","´",$string);
           return mb_convert_encoding($string, "UTF-8", mb_detect_encoding($string, "UTF-8, ISO-8859-1, ISO-8859-15", true));
         }
 
         public function creaUrlLink($s) {
-          
           $s = preg_replace("/á|à|â|ã|ª|ä/","a",$s);
           $s = preg_replace("/Á|À|Â|Ã|Ä/","A",$s);
           $s = preg_replace("/é|è|ê|ë/","e",$s);
@@ -511,13 +687,14 @@ class Utils
           $s = trim($s, "-");
           $s = iconv("utf-8", "us-ascii//TRANSLIT", $s);
           $s = preg_replace('~[^-a-z0-9_]+~', "", $s);
+          
           return $s;
         }
         
         public function netejaIntegracioPS($idProductePS){
-          if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET ps_producte = 0, ps_producte_atribut = 0, flag_actualitzat = 1 WHERE ps_producte = ".$idProductePS)){
-              $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET ps_producte = 0, ps_producte_atribut = 0, flag_actualitzat = 1  WHERE ps_producte = ".$idProductePS);
-              $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET ps_producte = 0, ps_producte_atribut = 0, flag_actualitzat = 1  WHERE ps_producte = ".$idProductePS);
+          if($this->myDB->consulta("UPDATE icgps.icg_ps_producte SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = 0, ps_producte_atribut = 0, flag_actualitzat = 1 WHERE ps_producte = ".$idProductePS)){
+              $this->myDB->consulta("UPDATE icgps.icg_ps_stocks SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = 0, ps_producte_atribut = 0, flag_actualitzat = 1  WHERE ps_producte = ".$idProductePS);
+              $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = 0, ps_producte_atribut = 0, flag_actualitzat = 1  WHERE ps_producte = ".$idProductePS);
               $this->myDB->consulta("DELETE FROM icgps.ps_producte_t_c WHERE ps_producte = ".$idProductePS);
               $this->myDB->consulta("DELETE FROM icgps.ps_producte_oferta WHERE ps_producte = ".$idProductePS);              
               echo "El producte PS ".$idProductePS." no exisitia i l'hem marcat per recrearse<br>\n";

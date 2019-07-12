@@ -40,10 +40,14 @@ class MSSQL{
    }
 
    public function fetch_array($consulta){
-      $result = $this->conexion->prepare($consulta);
-      $result->execute();
-
-      return $this->conexion->fetch(PDO::FETCH_ASSOC);
+      $resultat = $this->conexion->prepare($consulta);
+      if($resultat->execute())
+      {
+         return $resultat->fetch(PDO::FETCH_ASSOC);
+      } else {
+    	 echo 'MSSQL Error: Consulta: '.$consulta."<br>";
+         return 0;
+      }
    }
 
    public function num_rows($consulta){
