@@ -28,7 +28,7 @@ try {
 		{
 			$idProductePS = $utils->existeixProducte($row_producte['icg_producte']);
 			//echo "Producte PS: ".$idProductePS."<br>";
-			if (!$idProductePS){
+			if (!$idProductePS & $row_producte['descatalogado'] <> 'T' & $row_producte['visibleweb'] <> 'F'){
 					$idFabricantICG = $row_producte['fabricant'];
 					$nomFabricantICG = $row_producte['nom_fabricant'];
 					///Crear Fabricant (Si existeix, recupera n�mero)
@@ -45,7 +45,7 @@ try {
 					//Desar Producte/GrupTalla/GrupColor
 					$utils->desarProducteTallaColor($idProductePS,$idGrupTalla,$idGrupColor);
 					$productes_creats++;
-			}else{
+			}elseif ($idProductePS){
 				//Consulta $idGrupTalla i $idGrupColor a la taula ps_producte_t_c
 				$idGrupTalla = $utils->getGrup($idProductePS, "ps_grup_talla");
 				$idGrupColor = $utils->getGrup($idProductePS, "ps_grup_color");

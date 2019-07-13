@@ -317,7 +317,7 @@ class Utils
         $active = $xmlUpdate->product->active;
         
         if($active == $new_active){
-            echo "No fem de fer res a PS";
+            echo "No cal fer res a PS \n";
             if(!$new_active){
                 $new_ps_producte = intval($ps_producte) * -1;
                 $this->myDB->consulta("UPDATE icgps.icg_ps_producte SET timestamp = '".date("Y-m-d H:i:s")."', ps_producte = ".$new_ps_producte.", flag_actualitzat = 0 WHERE ps_producte = ".$ps_producte);
@@ -389,10 +389,8 @@ class Utils
             $optUpdate['putXml'] = $xmlUpdate->asXML();
             $optUpdate['id'] = $ps_producte;
             $xmlResponse = $this->webService->edit($optUpdate);
-
-            return true;
         }
-        return false;
+        return true;
     }
 
 
