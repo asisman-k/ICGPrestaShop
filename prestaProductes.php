@@ -47,6 +47,10 @@ try {
 					$productes_creats++;
 			}elseif ($idProductePS){
 				//Consulta $idGrupTalla i $idGrupColor a la taula ps_producte_t_c
+                if($row_producte['fabricant'] != 0 && $row_producte['ps_producte'] > 0){
+                    $utils->actualitzarMarca($idProductePS, $row_producte['fabricant'], $row_producte['nom_fabricant']);
+                    echo "S'ha actualitzat a la marca ".$row_producte['nom_fabricant']."<br>\n";
+                }
 				$idGrupTalla = $utils->getGrup($idProductePS, "ps_grup_talla");
 				$idGrupColor = $utils->getGrup($idProductePS, "ps_grup_color");
 				echo "El producte $idProductePS ja existeix, i te un grup talla $idGrupTalla i color $idGrupColor<br>\n";

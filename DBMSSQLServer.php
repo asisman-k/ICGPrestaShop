@@ -34,7 +34,7 @@ class MSSQL{
       {
          return $resultat;
       } else {
-		   echo 'MSSQL Error: Consulta: '.$consulta."<br>";
+		 //echo 'MSSQL Error: Consulta: '.$consulta."<br>";
          return 0;
       }
    }

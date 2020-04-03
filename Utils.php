@@ -24,16 +24,20 @@ class Utils
     protected $webService;
     protected $idProducte;
     protected $idFabricant;
+    
+    /* Mode debut */
+    protected $debug = False;
 
     /**
     * MÈTODES
     */
-    function __construct()
+    function __construct($debug = False)
     {
+      $this->debug = $debug;
       if(!isset($this->myDB))
       {
          $this->myDB = new MySQL();
-         $this->webService = new PrestaShopWebservice(PS_SHOP_PATH, PS_WS_AUTH_KEY, DEBUG);
+         $this->webService = new PrestaShopWebservice(PS_SHOP_PATH, PS_WS_AUTH_KEY, $this->debug);
       }
 
     if(!isset($this->myDBPS))
@@ -56,7 +60,7 @@ class Utils
 
     /* Obtenir productes a tractar */
     public function nousPreus($timestampACercar){
-      $consulta = "SELECT * FROM icgps.icg_ps_preus WHERE flag_actualitzat = 1 AND ps_producte_atribut > 0 ";
+      $consulta = "SELECT * FROM icgps.icg_ps_preus WHERE flag_actualitzat = 1 AND ps_producte_atribut > 0 limit 200";
       return $this->myDB->consulta($consulta);
     }
 
@@ -327,11 +331,8 @@ class Utils
             return true;
         } else{
             $resourceUpdate = $xmlUpdate->children()->children();
-            echo $resourceUpdate->active;
-            echo " - ";
             //$new_active 0 is inactve, 1 is active
             $resourceUpdate->active = $new_active;
-            echo $resourceUpdate->active;
             unset($resourceUpdate->manufacturer_name);
             unset($resourceUpdate->quantity);
             
@@ -393,7 +394,42 @@ class Utils
         return true;
     }
 
+    public function actualitzarMarca($ps_producte, $codi_marca, $nom_marca){
+      //echo "obtenirNomAtribut <br>\n";
+        $optUpdate['resource'] = 'products';
+        $optUpdate['id'] = $ps_producte;
+        $xmlUpdate = 0;
+        try{
+            $xmlUpdate = $this->webService->get($optUpdate);
+        }catch (Exception $e){
+            //La combinació no existeix a Prestashop, tenim dades incorrectes a la BD d'integració
+            echo $e->getMessage();
+            print("<pre>".print_r($optUpdate,true)."</pre>");
+            print("<pre>".print_r($producte,true)."</pre>");
+            return false;
+        }
 
+        $id_manufacturer = $xmlUpdate->product->id_manufacturer;
+        $codi_marca = self::crearFabricant($codi_marca, $nom_marca);
+
+        if($id_manufacturer <> $codi_marca){
+            $resourceUpdate = $xmlUpdate->children()->children();
+            echo $resourceUpdate->id_manufacturer;
+            echo " - ";
+            echo $icg_reference;
+            //$new_active 0 is inactve, 1 is active
+            $resourceUpdate->id_manufacturer = $codi_marca;
+            echo $resourceUpdate->id_manufacturer;
+            unset($resourceUpdate->manufacturer_name);
+            unset($resourceUpdate->quantity);
+            
+            //Enviar XML
+            $optUpdate['putXml'] = $xmlUpdate->asXML();
+            $optUpdate['id'] = $ps_producte;
+            $xmlResponse = $this->webService->edit($optUpdate);
+        }
+        return true;
+    }
 
 
     /**
@@ -622,6 +658,7 @@ class Utils
 
                 //Omplir camps
                 $resourceCreate->id_product = $producte['ps_producte'];
+                $resourceCreate->id_product_attribute = $producte['ps_producte_atribut'];
                 $resourceCreate->id_shop = 0;
                 $resourceCreate->id_cart = 0;
                 $resourceCreate->id_currency = 0;
@@ -649,6 +686,10 @@ class Utils
 
         public function flagActualitzatPreus($row_producte){
           $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET flag_actualitzat = 0 WHERE id = ".$row_producte['id']);
+        }
+
+        public function flagNoActualitzatPreus($row_producte){
+          $this->myDB->consulta("UPDATE icgps.icg_ps_preus SET flag_actualitzat = 2 WHERE id = ".$row_producte['id']);
         }
 
         public function parseja($response){

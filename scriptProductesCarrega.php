@@ -29,6 +29,7 @@ Programa principal per a carregar les novetats (articles, stocks i preus) a ICG 
     $descatalogats_actualitzats = 0;
     $eans_actualitzats = 0;
     $visibles_actualitzats = 0;
+    $marques_actualitzades = 0;
     if( $result > 0 ){//Hi ha productes a crear/actualitzar
         foreach ($result->fetchAll(PDO::FETCH_ASSOC) as $msrow_product)
         {
@@ -56,7 +57,13 @@ Programa principal per a carregar les novetats (articles, stocks i preus) a ICG 
                     $myDB->consulta("UPDATE icgps.icg_ps_producte SET visibleweb = '".$msrow_product['Visible_Web']."', timestamp = '".date("Y-m-d H:i:s")."', flag_actualitzat = 1 WHERE icg_producte = ".$msrow_product['CODARTICULO']." AND icg_color = '".$utils->encodeToUtf8($msrow_product['COLOR'])."' AND icg_talla = '".$utils->encodeToUtf8($msrow_product['TALLA'])."'");
                     $visibles_actualitzats++;
                     echo ">>Visible_Web: S'ha canviat ".$myrow_producte['visibleweb']." per ".$msrow_product['Visible_Web']." en el producte  ".$msrow_product['CODARTICULO']." AND icg_color = '".$msrow_product['COLOR']."' AND icg_talla = '".$msrow_product['TALLA']."'<br>\n";
-                }                
+                }
+                if( $msrow_product['Codigo_Marca'] != $myrow_producte['fabricant'] || $msrow_product['Descripcion_Marca'] != $myrow_producte['nom_fabricant']){
+                    //S'ha actualitzat el descatalogat
+                    $myDB->consulta("UPDATE icgps.icg_ps_producte SET fabricant = '".$msrow_product['Codigo_Marca']."', nom_fabricant = '".$msrow_product['Descripcion_Marca']."', timestamp = '".date("Y-m-d H:i:s")."', flag_actualitzat = 1 WHERE icg_producte = ".$msrow_product['CODARTICULO']." AND icg_color = '".$utils->encodeToUtf8($msrow_product['COLOR'])."' AND icg_talla = '".$utils->encodeToUtf8($msrow_product['TALLA'])."'");
+                    $marques_actualitzades++;
+                    echo ">>Marca: S'ha canviat ".$myrow_producte['nom_fabricant']." per ".$msrow_product['Descripcion_Marca']." en el producte  ".$msrow_product['CODARTICULO']." AND icg_color = '".$msrow_product['COLOR']."' AND icg_talla = '".$msrow_product['TALLA']."'<br>\n";
+                }
 
                 $productes_jatrobats++;
 			}else{
@@ -125,6 +132,7 @@ Programa principal per a carregar les novetats (articles, stocks i preus) a ICG 
         echo "Hem trobat ".$productes_encuats." productes nous apunt per ser carregats<br>\n";
         echo "Hem trobat ".$stocs_encuats." stocs per ser actualitzats<br>\n";
         echo "Hem trobat ".$preus_encuats." preus per ser actualitzats<br>\n";
+        echo "Hem trobat ".$marques_actualitzades." preus per ser actualitzats<br>\n";
         
     }  
 ?>

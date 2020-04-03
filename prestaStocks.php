@@ -32,8 +32,8 @@ Script  per a consultar el stock de la taula integració ICG i actualitzar-lo al
 		//echo date("Y-m-d H:i:s").": No	hi ha stocks a actualitzar.";
 	}
 	if($stocks_actualitzat){
-		echo "=====================<br>\n";
-		echo "Total stocks per actualitzar: ".$total_per_actualitzar."<br>\n";
-		echo "Total stocks actualitzats: ".$stocks_actualitzat."<br>\n";
+		//echo "=====================<br>\n";
+		//echo "Total stocks per actualitzar: ".$total_per_actualitzar."<br>\n";
+		//echo "Total stocks actualitzats: ".$stocks_actualitzat."<br>\n";
 	}
 ?>
